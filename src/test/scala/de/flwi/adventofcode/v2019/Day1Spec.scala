@@ -1,5 +1,8 @@
+package de.flwi.adventofcode.v2019
+
 import org.scalatest.FunSuite
 import org.scalatest.Matchers
+
 class Day1Spec extends FunSuite with Matchers {
 
   test("Part1") {

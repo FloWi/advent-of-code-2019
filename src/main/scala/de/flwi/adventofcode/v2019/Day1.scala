@@ -1,7 +1,9 @@
+package de.flwi.adventofcode.v2019
+
 import cats.effect.{Blocker, ExitCode, IO, IOApp, Resource}
 import cats.implicits._
 import fs2.{io, text, Stream}
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 
 /*
 
@@ -33,15 +35,13 @@ repeat the process, continuing until a fuel requirement is zero or negative.
 
 object Day1 extends IOApp {
 
+  import FileReader._
+
   def solver(fuelEquation: Int => Int) =
     Stream
       .resource(Blocker[IO])
       .flatMap { blocker =>
-        io.file
-          .readAll[IO](Paths.get("data/day1.txt"), blocker, 4096)
-          .through(text.utf8Decode)
-          .through(text.lines)
-          .filter(s => !s.isEmpty())
+        lines(blocker, Paths.get("data/day1.txt"))
           .map(_.toInt)
           .map(fuelEquation)
           .fold(0)(_ + _)
