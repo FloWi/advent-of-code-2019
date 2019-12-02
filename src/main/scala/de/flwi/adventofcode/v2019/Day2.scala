@@ -225,7 +225,8 @@ object Day2 extends IOApp {
       _ <- IO(println(resultPart2))
       _ <- IO(
         println(
-          s"result in the format aoc-website accepts ${resultPart2._1}${resultPart2._2}"
+          s"result in the format aoc-website accepts ${resultPart2._1
+            .formatted("%02d")}${resultPart2._2.formatted("%02d")}"
         )
       )
     } yield ExitCode.Success
