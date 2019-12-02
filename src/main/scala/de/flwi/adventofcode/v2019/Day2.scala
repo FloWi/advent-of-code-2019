@@ -1,9 +1,10 @@
 package de.flwi.adventofcode.v2019
 
-import cats.effect.{Blocker, ExitCode, IO, IOApp, Resource}
+import java.nio.file.Paths
+
+import cats.effect.{Blocker, ExitCode, IO, IOApp}
 import cats.implicits._
-import fs2.{io, text, Stream}
-import java.nio.file.{Path, Paths}
+import fs2.Stream
 
 /*
 =================
@@ -88,19 +89,24 @@ object Day2 extends IOApp {
 
   import FileReader._
 
-  def getInput: IO[String] = {
-    Stream
-      .resource(Blocker[IO])
-      .flatMap { blocker =>
-        lines(blocker, Paths.get("data/day2.txt"))
-          .take(1)
-      }
-      .compile
-      .toList
-      .map(_.head)
-  }
+  def run(args: List[String]): IO[ExitCode] =
+    for {
+      input <- getInput
+      resultPart1 <- IO(part1(input))
+      _ <- IO(println("result part 1"))
+      _ <- IO(println(resultPart1))
+      resultPart2 <- IO(part2(input))
+      _ <- IO(println("result part 2"))
+      _ <- IO(println(resultPart2))
+      _ <- IO(
+        println(
+          s"result in the format aoc-website accepts ${resultPart2._1
+            .formatted("%02d")}${resultPart2._2.formatted("%02d")}"
+        )
+      )
+    } yield ExitCode.Success
 
-  def part1(inputline: String): String = {
+  def part1(inputLine: String): String = {
     /*
     Once you have a working computer, the first step is to
     restore the gravity assist program (your puzzle input)
@@ -114,19 +120,13 @@ object Day2 extends IOApp {
     What value is left at position 0 after the program halts?
      */
 
-//    .map(result => s"Solution: ${result.split(",").head}\n${result}")
+    //    .map(result => s"Solution: ${result.split(",").head}\n${result}")
 
-    val ints = inputline
-      .split(",")
-      .map(_.toInt)
-      .toList
-
-    val result = calculateResultWithUpdatedNounAndVerb(ints, 12, 2)
-
-    result.mkString(",")
+    calculateResultWithUpdatedNounAndVerb(getInts(inputLine), 12, 2)
+      .mkString(",")
   }
 
-  def part2(inputline: String): (Int, Int) = {
+  def part2(inputLine: String): (Int, Int) = {
 
     /*
     you need to determine what pair of inputs produces the output 19690720."
@@ -137,25 +137,36 @@ object Day2 extends IOApp {
     Each of the two input values will be between 0 and 99, inclusive.
      */
 
-    val ints = inputline.split(",").toList.map(_.toInt)
-
-    val solution = findNounAndVerbForSolution(ints, 19690720).get
-
-    solution
+    findNounAndVerbForSolution(getInts(inputLine), 19690720).get
   }
+
+  def getInput: IO[String] =
+    Stream
+      .resource(Blocker[IO])
+      .flatMap { blocker =>
+        lines(blocker, Paths.get("data/day2.txt"))
+          .take(1)
+      }
+      .compile
+      .toList
+      .map(_.head)
+
+  def getInts(inputLine: String): List[Int] =
+    inputLine
+      .split(",")
+      .map(_.toInt)
+      .toList
 
   def calculateResultWithUpdatedNounAndVerb(
       ints: List[Int],
       noun: Int,
       verb: Int
-  ): List[Int] = {
-
+  ): List[Int] =
     intCodeProgram(
       ints
         .updated(1, noun)
         .updated(2, verb)
     )
-  }
 
   def findNounAndVerbForSolution(
       ints: List[Int],
@@ -169,11 +180,13 @@ object Day2 extends IOApp {
     combinations.find {
       case (noun, verb) =>
         val result = calculateResultWithUpdatedNounAndVerb(ints, noun, verb)
-        result(0) == expectedSolution
+        result.head == expectedSolution
     }
   }
 
   def intCodeProgram(inputs: List[Int]): List[Int] = {
+
+    @scala.annotation.tailrec
     def helper(currentInstruction: Int, ints: List[Int]): List[Int] = {
       ints.get(currentInstruction) match {
         case Some(x) if x == 1 || x == 2 =>
@@ -204,30 +217,6 @@ object Day2 extends IOApp {
     helper(0, inputs)
   }
 
-  def intCodeProgram(inputline: String): String = {
-    //Split one-liner into int-List
-
-    val ints = inputline.split(",").toList.map(_.toInt)
-
-    val result = intCodeProgram(ints)
-
-    result.mkString(",")
-  }
-
-  def run(args: List[String]): IO[ExitCode] =
-    for {
-      input <- getInput
-      resultPart1 <- IO(part1(input))
-      _ <- IO(println("result part 1"))
-      _ <- IO(println(resultPart1))
-      resultPart2 <- IO(part2(input))
-      _ <- IO(println("result part 2"))
-      _ <- IO(println(resultPart2))
-      _ <- IO(
-        println(
-          s"result in the format aoc-website accepts ${resultPart2._1
-            .formatted("%02d")}${resultPart2._2.formatted("%02d")}"
-        )
-      )
-    } yield ExitCode.Success
+  def intCodeProgram(inputLine: String): String =
+    intCodeProgram(getInts(inputLine)).mkString(",")
 }
