@@ -29,4 +29,5 @@ class Day4Spec extends FunSuite with Matchers {
     containsTwoAdjacentDigitsThatAreTheSameButNotPartOfLargerGroup(123444) shouldBe false //44 is part of 444
     containsTwoAdjacentDigitsThatAreTheSameButNotPartOfLargerGroup(111122) shouldBe true //1 is repeated more than twice, but 22 counts
   }
+
 }
