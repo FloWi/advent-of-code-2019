@@ -8,11 +8,11 @@ class Day5Spec extends FunSuite with Matchers {
   val input = getInput.unsafeRunSync()
   val ints  = input.split(",").toList.map(_.toInt)
 
-  test("Part1 opcode 3 - storing value") {
+  test("Part1 initialInstructionPointer 3 - storing value") {
     Day5.intCodeProgramWithInput("3,1,99", "4711") shouldBe "3,4711,99"
   }
 
-  test("Part1 opcode 4 - output of a value") {
+  test("Part1 initialInstructionPointer 4 - output of a value") {
     Day5.intCodeProgramWithInputAndOutput("4,3,99,4711", "") shouldBe (("4711", "4,3,99,4711"))
   }
 

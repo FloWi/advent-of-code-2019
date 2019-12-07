@@ -15,15 +15,15 @@ An Intcode program is a list of integers separated by commas
 (like 1,0,0,3,99).
 
 To run one, start by looking at the first integer (called position 0).
-Here, you will find an opcode - either 1, 2, or 99.
-The opcode indicates what to do; for example, 99 means that
+Here, you will find an initialInstructionPointer - either 1, 2, or 99.
+The initialInstructionPointer indicates what to do; for example, 99 means that
 the program is finished and should immediately halt.
-Encountering an unknown opcode means something went wrong.
+Encountering an unknown initialInstructionPointer means something went wrong.
 
 
 Opcode 1 adds together numbers read from two positions and
 stores the result in a third position.
-The three integers immediately after the opcode tell you these
+The three integers immediately after the initialInstructionPointer tell you these
 three positions - the first two indicate the positions from which you
 should read the input values, and the third indicates the position
 at which the output should be stored.
@@ -33,12 +33,12 @@ For example, if your Intcode computer encounters 1,10,20,30,
 it should read the values at positions 10 and 20,
 add those values, and then overwrite the value at position 30 with their sum.
 
-Opcode 2 works exactly like opcode 1, except it multiplies the
+Opcode 2 works exactly like initialInstructionPointer 1, except it multiplies the
 two inputs instead of adding them.
-Again, the three integers after the opcode indicate
+Again, the three integers after the initialInstructionPointer indicate
 where the inputs and outputs are, not their values.
 
-Once you're done processing an opcode, move to the next one
+Once you're done processing an initialInstructionPointer, move to the next one
 by stepping forward 4 positions.
 
 
@@ -55,10 +55,10 @@ into multiple lines:
 
 
 The first four integers, 1,9,10,3, are at positions 0, 1, 2, and 3.
-Together, they represent the first opcode (1, addition),
+Together, they represent the first initialInstructionPointer (1, addition),
 the positions of the two inputs (9 and 10),
 and the position of the output (3).
-To handle this opcode, you first need to get the values at the
+To handle this initialInstructionPointer, you first need to get the values at the
 input positions: position 9 contains 30, and position 10 contains 40.
 Add these numbers together to get 70.
 Then, store this value at the output position;
@@ -69,8 +69,8 @@ Afterward, the program looks like this:
 2,3,11,0,
 99,
 30,40,50
-Step forward 4 positions to reach the next opcode, 2.
-This opcode works just like the previous,
+Step forward 4 positions to reach the next initialInstructionPointer, 2.
+This initialInstructionPointer works just like the previous,
 but it multiplies instead of adding.
 The inputs are at positions 3 and 11;
 these positions contain 70 and 50 respectively.
@@ -80,7 +80,7 @@ Multiplying these produces 3500; this is stored at position 0:
 2,3,11,0,
 99,
 30,40,50
-Stepping forward 4 more positions arrives at opcode 99,
+Stepping forward 4 more positions arrives at initialInstructionPointer 99,
 halting the program.
 
  */
