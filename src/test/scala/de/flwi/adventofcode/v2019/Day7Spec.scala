@@ -45,10 +45,21 @@ class Day7Spec extends FunSuite with Matchers {
   }
 
   test("part 2 - debugging real input") {
-    //I know, that phase setting 8,9,7,6,5 yields the highest result
+//    amp #0 - idx: 429; Opcode: 4; next idx: 429; outputting 8759949
+//    amp #1 - idx: 510; Opcode: 4; next idx: 510; outputting 17519898
+//    amp #2 - idx: 348; Opcode: 4; next idx: 348; outputting 17519900
+//    amp #3 - idx: 267; Opcode: 4; next idx: 267; outputting 17519902
+//    amp #4 - idx: 186; Opcode: 4; next idx: 186; outputting 17519904
+//    amp #0 - idx: 429; Opcode: 99; Done. Outputting 8759949
+//    amp #1 - idx: 510; Opcode: 99; Done. Outputting 17519898
+//    amp #2 - idx: 348; Opcode: 99; Done. Outputting 17519900
+//    amp #3 - idx: 267; Opcode: 99; Done. Outputting 17519902
+//    amp #4 - idx: 186; Opcode: 99; Done. Outputting 17519904
+
 
     val actual = runAmplifiers(getInts(input), Vector(8,9,7,6,5))
-    fail("don't know what's right or wrong. giving up on this one")
+    print(s"output of last amp: ${actual.outputValues}")
+    actual.outputValues shouldBe Vector(17519904)
   }
 
   test("part 1") {

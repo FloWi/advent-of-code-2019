@@ -157,8 +157,9 @@ object Day7 extends IOApp {
               value
           }
 
-//          helper(nextInstruction, intProgram, inputValues, Vector(value) ++ outputValues)
-          (intProgram, Vector(value) ++ outputValues, nextInstruction)
+          val newOutput = Vector(value) ++ outputValues
+          println(s"amp #? - idx: $nextInstruction; Opcode: ${instruction.opcode}; outputting $newOutput")
+          (intProgram, newOutput, nextInstruction)
 
         case Instruction(jumpIf, Vector(first, second)) if jumpIf == 5 || jumpIf == 6 =>
           val compareToZeroValue = getValue(first)
@@ -191,6 +192,7 @@ object Day7 extends IOApp {
           helper(nextIndex, intProgram.updated(output, resultValue), inputValues, outputValues)
 
         case Instruction(99, _) =>
+          println(s"amp #? - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
           (intProgram, outputValues.reverse, instructionPointer)
 
         case broken =>
@@ -289,13 +291,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
       val inputValues                                = if (iteration == 0) Vector(phaseSetting, input) else Vector(input)
       val (newPrg, outputValues, instructionPointer) = intCodeProgram(prg, inputValues, pointer)
 
-      if (newPrg(instructionPointer) == 99) {
-        myDebug("reached end - forwarding input value to output")
-        Amplifier(newPrg, phaseSetting, instructionPointer, Vector(input) ++ outputValues)
-      }
-      else {
-        Amplifier(newPrg, phaseSetting, instructionPointer, outputValues)
-      }
+      Amplifier(newPrg, phaseSetting, instructionPointer, outputValues)
     }
   }
 
@@ -309,20 +305,23 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
       def currentOpCodes = amplifiers.map(a => a.prg(a.pointer))
 
       amplifiers.indices.foreach { idx =>
+        if (currentOpCodes.contains(99)) {
+          //println(s"iteration: $iteration; Amp #$idx; Found an amp that has halted ${currentOpCodes}. Continuing computation")
+        }
         val amp                = amplifiers(idx)
         val inputForCurrentAmp = if (idx == 0) inputForFirstAmp else amplifiers(idx - 1).outputValues.head
 
         val updatedAmp = amp.run(inputForCurrentAmp, iteration)
         amplifiers.update(idx, updatedAmp)
-        println(s"iteration: $iteration; Amp #$idx; input: $inputForCurrentAmp; result: ${updatedAmp.outputValues}. Current ip: ${updatedAmp.pointer} ")
+      //println(s"iteration: $iteration; Amp #$idx; input: $inputForCurrentAmp; result: ${updatedAmp.outputValues}. Current ip: ${updatedAmp.pointer} ")
       }
 
       val newAmps = amplifiers.toVector
       val last    = newAmps.last
-      if (newAmps.last.currentOpCode == 99)
+      if (last.currentOpCode == 99)
         newAmps
       else
-        helper(newAmps, iteration + 1, newAmps.last.outputValues.head)
+        helper(newAmps, iteration + 1, last.outputValues.head)
     }
 
     val amps = helper(phaseSettings.map(ps => Amplifier(intCodeProgram, ps, 0)), 0, 0)
@@ -341,7 +340,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
       }
       .maxBy(_._1.outputValues.head)
 
-  val isDebug = false
+  val isDebug = true
   def myDebug(x: Any): Unit =
     if (isDebug) { Console.println(x) }
 
