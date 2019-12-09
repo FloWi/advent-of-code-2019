@@ -223,7 +223,7 @@ object Day9 extends IOApp {
         }
 
         val newOutput = Vector(value) ++ outputValues
-        println(s"amp #$id - idx: $nextInstruction; Opcode: ${instruction.opcode}; outputting $newOutput")
+        myDebug(s"amp #$id - idx: $nextInstruction; Opcode: ${instruction.opcode}; outputting $newOutput")
         IntcodeState(intProgram, nextInstruction, inputValues, newOutput, id)
 
       case Instruction(jumpIf, Vector(first, second)) if jumpIf == OpCode.JumpIfTrue || jumpIf == OpCode.JumpIfFalse =>
@@ -257,11 +257,8 @@ object Day9 extends IOApp {
         intCodeProgram(IntcodeState(intProgram.updated(output, resultValue), nextIndex, inputValues, outputValues, id))
 
       case Instruction(OpCode.Finished, _) =>
-        println(s"amp #$id - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
+        myDebug(s"amp #$id - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
         IntcodeState(intProgram, instructionPointer, inputValues, outputValues, id)
-//
-//      case broken =>
-//        throw new RuntimeException(s"something went wrong: $broken")
     }
 
   }
@@ -270,8 +267,8 @@ object Day9 extends IOApp {
 
     val wholeOpcode = ints(currentIndex)
 
-    val isInImmediateMode = wholeOpcode >= 100
-    val opcode = OpCode.fromInt(wholeOpcode % 100)
+    val isInImmediateMode  = wholeOpcode >= 100
+    val opcode             = OpCode.fromInt(wholeOpcode % 100)
     val numberOfParameters = OpCode.numberOfParamters(opcode)
 
     val result =
@@ -358,7 +355,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
 
       amplifiers.indices.foreach { idx =>
         if (currentOpCodes.contains(99)) {
-          println(s"iteration: $iteration; Amp #$idx; Found an amp that has halted. Opcodes of amps: ${currentOpCodes}. Continuing computation")
+          myDebug(s"iteration: $iteration; Amp #$idx; Found an amp that has halted. Opcodes of amps: ${currentOpCodes}. Continuing computation")
         }
         val amp                = amplifiers(idx)
         val inputForCurrentAmp = if (idx == 0) inputForFirstAmp else amplifiers(idx - 1).outputValues.head
@@ -386,7 +383,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
       inputForFirstAmp = 0
     )
 
-    println(amps.mkString("\n"))
+    myDebug(amps.mkString("\n"))
     amps.last
   }
 
@@ -400,7 +397,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
       }
       .maxBy(_._1.outputValues.head)
 
-  val isDebug = true
+  val isDebug = false
   def myDebug(x: Any): Unit =
     if (isDebug) { Console.println(x) }
 
