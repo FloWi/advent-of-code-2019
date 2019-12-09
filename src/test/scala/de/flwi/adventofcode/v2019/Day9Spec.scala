@@ -126,10 +126,10 @@ class Day9Spec extends FunSuite with Matchers {
   }
 
   test("Day 7 - Original int-code-machine part1 - decodeInstruction: (normal) positional mode ") {
-    Day9.decodeInstruction(getInts("2,4,3,4,33")) shouldBe Instruction(2, Vector(Positional(4), Positional(3), Positional(4)))
+    Day9.decodeInstruction(getInts("2,4,3,4,33")) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Positional(3), Positional(4)))
   }
   test("Day 7 - Original int-code-machine part1 - decodeInstruction: immediate mode ") {
-    Day9.decodeInstruction(getInts("1002,4,3,4,33")) shouldBe Instruction(2, Vector(Positional(4), Immediate(3), Positional(4)))
+    Day9.decodeInstruction(getInts("1002,4,3,4,33")) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Immediate(3), Positional(4)))
   }
 
   test("Day 7 - Original int-code-machine part1 - example with immediate mode") {
@@ -137,7 +137,7 @@ class Day9Spec extends FunSuite with Matchers {
   }
 
   test("Day 7 - Original int-code-machine part1 - immediate mode must reverse parameters") {
-    Day9.decodeInstruction(getInts("1101,1,238,225")) shouldBe Instruction(1, Vector(Immediate(1), Immediate(238), Positional(225)))
+    Day9.decodeInstruction(getInts("1101,1,238,225")) shouldBe Instruction(OpCode.Addition, Vector(Immediate(1), Immediate(238), Positional(225)))
   }
 
   test("Day 7 - Original int-code-machine part1 - outputting should be possible with immediate parameter ") {
