@@ -26,6 +26,29 @@ class Day9Spec extends FunSpec with Matchers {
       getValueOfParameter(decodeInstruction(ints = prg, currentIndex = 0).parameters.head, prg, relativeBase = 1) shouldBe 100
       getValueOfParameter(decodeInstruction(ints = prg, currentIndex = 0).parameters.head, prg, relativeBase = 2) shouldBe 99
     }
+
+    it("should parse parameters for Opcode.AdjustRelativeBase correctly") {
+      decodeInstruction(getInts("109,19"), 0) shouldBe Instruction(OpCode.AdjustRelativeBase, Vector(Parameter.Immediate(19)))
+    }
+
+    it("should handle Opcode 9 (Adjust relative base) correctly") {
+      val initial = IntcodeState(getInts("109,19,99"), 0, Vector.empty, Vector.empty, 2000, "")
+      val actual  = intCodeProgram(initial)
+      actual.relativeBase shouldBe 2019
+    }
+
+    it("should handle part 1 example #1 correctly") {
+      //takes no input and produces a copy of itself as output.
+      val initial = IntcodeState(getInts("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"), 0, Vector.empty, Vector.empty, 2000, "")
+      val actual  = intCodeProgram(initial)
+      actual.outputValues shouldBe Vector.empty
+    }
+
+    it("should handle writing a value to an index larger than initialProgram.length correctly") {
+      //WriteValue (Opcode 3)
+      val initial = IntcodeState(getInts("3,100,99"), 0, Vector(4711), Vector.empty, 0, "id")
+      val actual  = intCodeProgram(initial)
+    }
   }
 
   describe("Day 7") {
@@ -57,8 +80,6 @@ class Day9Spec extends FunSpec with Matchers {
 
       val ampAfterIteration0 = ampInitial.run(0, 0)
       ampAfterIteration0.outputValues shouldBe Vector(5)
-      ampAfterIteration0.intcodeState.intProgram shouldBe Vector(3, 26, 1001, 26, -4, 26, 3, 27, 1002, 27, 2, 27, 1, 27, 26, 27, 4, 27, 1001, 28, -1, 28, 1005,
-        28, 6, 99, 5, 5, 5)
       ampAfterIteration0.intcodeState.instructionPointer shouldBe 18
 
       val ampAfterIteration1 = ampAfterIteration0.run(129, 1) //from Amp E
@@ -134,7 +155,7 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("Original int-code-machine part1 - initialInstructionPointer 3 - storing value") {
-      Day9.intCodeProgramWithInput("3,1,99", "4711").intProgram shouldBe getInts("3,4711,99")
+      Day9.intCodeProgramWithInput("3,1,99", "4711").ints shouldBe getInts("3,4711,99")
     }
 
     it("Original int-code-machine part1 - initialInstructionPointer 4 - output of a value") {
@@ -142,10 +163,10 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("Original int-code-machine part1 - decodeInstruction: (normal) positional mode ") {
-      Day9.decodeInstruction(getInts("2,4,3,4,33")) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Positional(3), Positional(4)))
+      Day9.decodeInstruction(getInts("2,4,3,4,33"), 0) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Positional(3), Positional(4)))
     }
     it("Original int-code-machine part1 - decodeInstruction: immediate mode ") {
-      Day9.decodeInstruction(getInts("1002,4,3,4,33")) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Immediate(3), Positional(4)))
+      Day9.decodeInstruction(getInts("1002,4,3,4,33"), 0) shouldBe Instruction(OpCode.Multiplication, Vector(Positional(4), Immediate(3), Positional(4)))
     }
 
     it("Original int-code-machine part1 - example with immediate mode") {
@@ -153,7 +174,7 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("Original int-code-machine part1 - immediate mode must reverse parameters") {
-      Day9.decodeInstruction(getInts("1101,1,238,225")) shouldBe Instruction(OpCode.Addition, Vector(Immediate(1), Immediate(238), Positional(225)))
+      Day9.decodeInstruction(getInts("1101,1,238,225"), 0) shouldBe Instruction(OpCode.Addition, Vector(Immediate(1), Immediate(238), Positional(225)))
     }
 
     it("Original int-code-machine part1 - outputting should be possible with immediate parameter ") {
