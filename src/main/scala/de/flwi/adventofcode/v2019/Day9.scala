@@ -12,7 +12,7 @@ object Day9 extends IOApp {
 
   sealed trait OpCode
   object OpCode {
-    def fromInt(opcode: Int): OpCode =
+    def fromInt(opcode: Long): OpCode =
       opcode match {
         case 1  => Addition
         case 2  => Multiplication
@@ -67,7 +67,7 @@ object Day9 extends IOApp {
 
     case class Positional(pos: Int) extends Parameter
 
-    case class Immediate(value: Int) extends Parameter
+    case class Immediate(value: Long) extends Parameter
 
     case class Relative(offsetFromRelativeBase: Int) extends Parameter
 
@@ -95,15 +95,17 @@ object Day9 extends IOApp {
     } yield ExitCode.Success
 
   def part1(inputLine: String): String = {
-    val result = amplifierProgram(getInts(inputLine))
+    val initial = IntcodeState(getInts(inputLine), instructionPointer = 0, inputValues = Vector(1L), outputValues = Vector.empty, relativeBase = 0, id = "")
+    val actual  = intCodeProgram(initial)
 
-    s"Highest signal from the amplifiers is: ${result._1}. Amplifier settings were ${result._2}"
+    actual.outputValues.toString()
   }
 
   def part2(inputLine: String): String = {
-    val result = feedbackLoopAmplifierProgram(getInts(inputLine))
+    val initial = IntcodeState(getInts(inputLine), instructionPointer = 0, inputValues = Vector(2L), outputValues = Vector.empty, relativeBase = 0, id = "")
+    val actual  = intCodeProgram(initial)
 
-    s"Highest signal from the amplifiers is: ${result._1.outputValues.head}. Phase settings were ${result._2}"
+    actual.outputValues.toString()
   }
 
   def getInput: IO[String] =
@@ -120,18 +122,18 @@ object Day9 extends IOApp {
       .toList
       .map(_.head)
 
-  def getInts(inputLine: String): Vector[Int] =
+  def getInts(inputLine: String): Vector[Long] =
     inputLine
       .split(",")
       .filter(_.nonEmpty)
-      .map(_.toInt)
+      .map(_.toLong)
       .toVector
 
   def calculateResultWithUpdatedNounAndVerb(
-    ints: Vector[Int],
-    noun: Int,
-    verb: Int
-  ): Vector[Int] =
+    ints: Vector[Long],
+    noun: Long,
+    verb: Long
+  ): Vector[Long] =
     intCodeProgram(
       ints
         .updated(1, noun)
@@ -142,7 +144,7 @@ object Day9 extends IOApp {
     ).outputValues
 
   def findNounAndVerbForSolution(
-    ints: Vector[Int],
+    ints: Vector[Long],
     expectedSolution: Int
   ): Option[(Int, Int)] = {
     val combinations = for {
@@ -158,13 +160,13 @@ object Day9 extends IOApp {
   }
 
   object IntcodeState {
-    def apply(intProgram: Vector[Int],
+    def apply(intProgram: Vector[Long],
               instructionPointer: Int,
-              inputValues: Vector[Int],
-              outputValues: Vector[Int],
+              inputValues: Vector[Long],
+              outputValues: Vector[Long],
               relativeBase: Int,
               id: String): IntcodeState = {
-      val prg = intProgram.zipWithIndex.map(_.swap).toMap.withDefaultValue(0)
+      val prg = intProgram.zipWithIndex.map(_.swap).toMap.withDefaultValue(0L)
 
       new IntcodeState(
         prg,
@@ -178,20 +180,21 @@ object Day9 extends IOApp {
     }
   }
 
-  case class IntcodeState private(intProgram: Map[Int, Int],
-                          instructionPointer: Int,
-                          inputValues: Vector[Int],
-                          outputValues: Vector[Int],
-                          relativeBase: Int,
-                          id: String) {
+  case class IntcodeState private (intProgram: Map[Int, Long],
+                                   instructionPointer: Int,
+                                   inputValues: Vector[Long],
+                                   outputValues: Vector[Long],
+                                   relativeBase: Int,
+                                   id: String) {
 
-    def ints: Vector[Int] = {
+    lazy val ints: Vector[Long] = {
       val maxIndex = intProgram.keys.max
-      Vector.tabulate(maxIndex+1)(intProgram.apply)
+      Vector.tabulate(maxIndex + 1)(intProgram.apply)
     }
 
-    def run(inputValues: Vector[Int]): IntcodeState =
+    def run(inputValues: Vector[Long]): IntcodeState =
       this.copy(inputValues = inputValues).run()
+
     @scala.annotation.tailrec
     final def run(): IntcodeState = {
 
@@ -201,11 +204,18 @@ object Day9 extends IOApp {
       myDebug()
       val instruction = decodeInstruction(intProgram, instructionPointer)
 
-      def getValue(parameter: Parameter): Int =
+      def getPositionOutput(parameter: Parameter) = parameter match {
+        case Positional(pos)                  => pos
+        case Immediate(_)                     => throw new IllegalStateException("Output param can't be in immediate mode")
+        case Relative(offsetFromRelativeBase) => relativeBase + offsetFromRelativeBase
+      }
+
+      def getValue(parameter: Parameter): Long =
         getValueOfParameter(parameter, intProgram, relativeBase)
 
       instruction match {
-        case Instruction(OpCode.Addition, Vector(first, second, Positional(positionOutput))) =>
+        case Instruction(OpCode.Addition, Vector(first, second, parameter: Parameter)) =>
+          val positionOutput = getPositionOutput(parameter)
           //Addition
           val result          = getValue(first) + getValue(second)
           val nextInstruction = instructionPointer + 4
@@ -214,7 +224,9 @@ object Day9 extends IOApp {
           )
           IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues, relativeBase, id).run()
 
-        case Instruction(OpCode.Multiplication, Vector(first, second, Positional(positionOutput))) =>
+        case Instruction(OpCode.Multiplication, Vector(first, second, parameter: Parameter)) =>
+          val positionOutput = getPositionOutput(parameter)
+
           //Multiplication
           val result          = getValue(first) * getValue(second)
           val nextInstruction = instructionPointer + 4
@@ -223,8 +235,10 @@ object Day9 extends IOApp {
           )
           IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues, relativeBase, id).run()
 
-        case Instruction(OpCode.WriteValue, Vector(Positional(positionInput))) =>
+        case Instruction(OpCode.WriteValue, Vector(parameter)) =>
           //read input and stores it into register
+
+          val positionOutput = getPositionOutput(parameter)
 
           if (inputValues.isEmpty) {
             myDebug(s"no more input values - halting execution")
@@ -236,9 +250,9 @@ object Day9 extends IOApp {
 
             val nextInstruction = instructionPointer + 2
             myDebug(
-              s"read input ($currentInputValue) and stored it to register $positionInput. Next instruction at index $nextInstruction (${intProgram(nextInstruction)})"
+              s"read input ($currentInputValue) and stored it to register $positionOutput. Next instruction at index $nextInstruction (${intProgram(nextInstruction)})"
             )
-            IntcodeState(intProgram.updated(positionInput, currentInputValue), nextInstruction, restInputValues, outputValues, relativeBase, id).run()
+            IntcodeState(intProgram.updated(positionOutput, currentInputValue), nextInstruction, restInputValues, outputValues, relativeBase, id).run()
           }
         case Instruction(OpCode.PrintValue, Vector(first)) =>
           //read and outputs value from register or direct
@@ -263,36 +277,44 @@ object Day9 extends IOApp {
           myDebug(
             s"$jumpIf: compareToZeroValue '$compareToZeroValue', result: $result. Next instruction at index $nextIndex. ${if (result) "Jump" else "No jump"}"
           )
-          IntcodeState(intProgram, nextIndex, inputValues, outputValues, relativeBase, id).run()
+          IntcodeState(intProgram, nextIndex.toInt, inputValues, outputValues, relativeBase, id).run()
 
-        case Instruction(lessThanOrEqualsOpCode, Vector(compareFirst, compareSecond, Positional(output)))
+        case Instruction(lessThanOrEqualsOpCode, Vector(compareFirst, compareSecond, parameter: Parameter))
             if lessThanOrEqualsOpCode == OpCode.LessThan || lessThanOrEqualsOpCode == OpCode.Equals =>
+          val positionOutput = getPositionOutput(parameter)
+
           val left  = getValue(compareFirst)
           val right = getValue(compareSecond)
 
           val result             = if (lessThanOrEqualsOpCode == OpCode.LessThan) left < right else left == right
           val comparisonOperator = if (lessThanOrEqualsOpCode == OpCode.LessThan) "<" else "=="
 
-          val resultValue = if (result) 1 else 0
+          val resultValue = if (result) 1L else 0L
 
           val nextIndex = instructionPointer + 4
 
-          myDebug(s"$left $comparisonOperator $right = $result. Storing $resultValue at register $output")
+          myDebug(s"$left $comparisonOperator $right = $result. Storing $resultValue at register $positionOutput")
 
-          IntcodeState(intProgram.updated(output, resultValue), nextIndex, inputValues, outputValues, relativeBase, id).run()
+          IntcodeState(intProgram.updated(positionOutput, resultValue), nextIndex, inputValues, outputValues, relativeBase, id).run()
 
-        case Instruction(OpCode.AdjustRelativeBase, Vector(Immediate(offset))) =>
-          IntcodeState(intProgram, instructionPointer + 2, inputValues, outputValues, relativeBase + offset, id).run()
+        case Instruction(OpCode.AdjustRelativeBase, Vector(parameter)) =>
+          val offset          = getValue(parameter)
+          val newRelativeBase = relativeBase + offset
+          IntcodeState(intProgram, instructionPointer + 2, inputValues, outputValues, newRelativeBase.toInt, id).run()
 
         case Instruction(OpCode.Finished, _) =>
           myDebug(s"amp #$id - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
           IntcodeState(intProgram, instructionPointer, inputValues, outputValues, relativeBase, id)
+
+        case _ =>
+          throw new IllegalArgumentException(s"broken\ncurrent instruction: $instruction\n$this")
+
       }
     }
 
-    def opCode: Int = intProgram(instructionPointer)
+    def opCode: Long = intProgram(instructionPointer)
   }
-  def run(intProgram: Vector[Int], inputValues: Vector[Int], initialInstructionPointer: Int, id: String): IntcodeState =
+  def run(intProgram: Vector[Long], inputValues: Vector[Long], initialInstructionPointer: Int, id: String): IntcodeState =
     intCodeProgram(
       IntcodeState(
         intProgram,
@@ -304,26 +326,26 @@ object Day9 extends IOApp {
       )
     )
 
-  def getValueOfParameter(parameter: Parameter, intProgram: Vector[Int], relativeBase: Int): Int =
+  def getValueOfParameter(parameter: Parameter, intProgram: Vector[Long], relativeBase: Int): Long =
     getValueOfParameter(parameter, intProgram.zipWithIndex.map(_.swap).toMap, relativeBase)
 
-  def getValueOfParameter(parameter: Parameter, intProgram: Map[Int, Int], relativeBase: Int): Int =
+  def getValueOfParameter(parameter: Parameter, intProgram: Map[Int, Long], relativeBase: Int): Long =
     parameter match {
       case Positional(pos)  => intProgram(pos)
       case Immediate(value) => value
       case Relative(offset) => intProgram(relativeBase + offset)
     }
 
-  def intCodeProgram(intProgram: Vector[Int], inputValues: Vector[Int], initialInstructionPointer: Int, id: String): IntcodeState =
+  def intCodeProgram(intProgram: Vector[Long], inputValues: Vector[Long], initialInstructionPointer: Int, id: String): IntcodeState =
     run(intProgram, inputValues, initialInstructionPointer, id)
 
   def intCodeProgram(intcodeState: IntcodeState): IntcodeState =
     intcodeState.run()
 
-  def decodeInstruction(ints: Vector[Int], currentIndex: Int): Instruction =
+  def decodeInstruction(ints: Vector[Long], currentIndex: Int): Instruction =
     decodeInstruction(ints.zipWithIndex.map(_.swap).toMap, currentIndex)
 
-  def decodeInstruction(ints: Map[Int, Int], currentIndex: Int): Instruction = {
+  def decodeInstruction(ints: Map[Int, Long], currentIndex: Int): Instruction = {
 
     import Parameter._
 
@@ -335,7 +357,7 @@ object Day9 extends IOApp {
 
     val result =
       if (!isInImmediateMode) {
-        Instruction(opcode, 1.to(numberOfParameters).toVector.map(offset => Positional(ints(currentIndex + offset))))
+        Instruction(opcode, 1.to(numberOfParameters).toVector.map(offset => Positional(ints(currentIndex + offset).toInt)))
       }
       else {
         /* the wholeOpcode is built like this
@@ -356,14 +378,14 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
 
         val parameters = parameterString.reverse.zipWithIndex.map {
           case ('0', idx) => //position mode
-            Positional(ints(1 + currentIndex + idx))
+            Positional(ints(1 + currentIndex + idx).toInt)
 
           case ('1', idx) =>
             Immediate(ints(1 + currentIndex + idx))
 
           case ('2', idx) =>
             val offset = ints(1 + currentIndex + idx)
-            Relative(offset)
+            Relative(offset.toInt)
 
           case _ => throw new IllegalArgumentException(s"problem decoding ${ints.slice(currentIndex, currentIndex + 6)}")
         }
@@ -376,10 +398,10 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
   def intCodeProgramFromString(inputLine: String, inputs: String = ""): String =
     intCodeProgram(getInts(inputLine), getInts(inputs), 0, "").ints.mkString(",")
 
-  def amplifier(intcodeProgram: Vector[Int], amplifierSetting: Int, input: Int): Int =
+  def amplifier(intcodeProgram: Vector[Long], amplifierSetting: Int, input: Long): Long =
     intCodeProgram(intcodeProgram, Vector(amplifierSetting, input), 0, "").outputValues.head
 
-  def amplifierProgram(intcodeProgram: Vector[Int]) = {
+  def amplifierProgram(intcodeProgram: Vector[Long]) = {
     val sequences = 0.to(4).toVector.permutations.map {
       case v @ Vector(a, b, c, d, e) =>
         val resA = intCodeProgram(intcodeProgram, Vector(a, 0), 0, "a").outputValues.head
@@ -397,11 +419,11 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
 
   case class Amplifier(intcodeState: IntcodeState, phaseSetting: Int) {
 
-    val outputValues: Vector[Int] = intcodeState.outputValues
+    val outputValues: Vector[Long] = intcodeState.outputValues
 
-    val currentOpCode: Int = intcodeState.opCode
+    val currentOpCode: Long = intcodeState.opCode
 
-    def run(input: Int, iteration: Int): Amplifier = {
+    def run(input: Long, iteration: Int): Amplifier = {
 
       val inputValues = if (iteration == 0) Vector(phaseSetting, input) else Vector(input)
       val newState    = intcodeState.run(inputValues)
@@ -410,9 +432,9 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
     }
   }
 
-  def runAmplifiers(intCodeProgram: Vector[Int], phaseSettings: Vector[Int]) = {
+  def runAmplifiers(intCodeProgram: Vector[Long], phaseSettings: Vector[Int]) = {
 
-    def helper(amps: Vector[Amplifier], iteration: Int, inputForFirstAmp: Int): Vector[Amplifier] = {
+    def helper(amps: Vector[Amplifier], iteration: Int, inputForFirstAmp: Long): Vector[Amplifier] = {
 
       val amplifiers: ArrayBuffer[Amplifier] =
         collection.mutable.ArrayBuffer(amps: _*)
@@ -453,7 +475,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
     amps.last
   }
 
-  def feedbackLoopAmplifierProgram(prg: Vector[Int]) =
+  def feedbackLoopAmplifierProgram(prg: Vector[Long]) =
     9.to(5, step = -1)
       .toVector
       .permutations

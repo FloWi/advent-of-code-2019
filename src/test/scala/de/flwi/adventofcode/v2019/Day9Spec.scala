@@ -47,12 +47,35 @@ class Day9Spec extends FunSpec with Matchers {
 
     it("should handle writing a value to an index larger than initialProgram.length correctly") {
       val prg = "3,100,99"
+      val instruction = decodeInstruction(getInts(prg), 0)
       //WriteValue (Opcode 3)
-      val initial = IntcodeState(getInts(prg), 0, Vector(4711), Vector.empty, 0, "id")
+      val initial = IntcodeState(getInts(prg), 0, Vector(4711L), Vector.empty, 0, "id")
       val actual  = intCodeProgram(initial)
       actual.ints.size shouldBe 101
       actual.ints.take(3).mkString(",") shouldBe prg
       actual.ints(100) shouldBe 4711
+    }
+
+    it("should handle part 1 example #2 correctly (big numbers)") {
+      //should output a 16-digit number.
+      val initial = IntcodeState(getInts("1102,34915192,34915192,7,4,7,99,0"), 0, Vector.empty, Vector.empty, 0, "")
+      val actual  = intCodeProgram(initial)
+      withClue(s"output should be 16 digits long. Output values were \n${actual.outputValues}") {
+        actual.outputValues.head.toString.length shouldBe 16
+      }
+    }
+
+    it("should handle part 1 example #3 correctly (big numbers)") {
+      val initial = IntcodeState(getInts("104,1125899906842624,99"), 0, Vector.empty, Vector.empty, 0, "")
+      val actual  = intCodeProgram(initial)
+      actual.outputValues shouldBe Vector(1125899906842624L)
+    }
+
+    it("part 1") {
+      println(part1(getInput.unsafeRunSync()))
+    }
+    it("part 2") {
+      println(part2(getInput.unsafeRunSync()))
     }
   }
 
@@ -134,11 +157,16 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("part 1") {
-      println(part1(day7Input))
+      val result = amplifierProgram(getInts(day7Input))
+
+      println(s"Highest signal from the amplifiers is: ${result._1}. Amplifier settings were ${result._2}")
     }
 
     it("part 2") {
-      println(part2(day7Input))
+      val result = feedbackLoopAmplifierProgram(getInts(day7Input))
+
+      println(s"Highest signal from the amplifiers is: ${result._1.outputValues.head}. Phase settings were ${result._2}")
+
     }
 
     it("part 1 - example #1") {
