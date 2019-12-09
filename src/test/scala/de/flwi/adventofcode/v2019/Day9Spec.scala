@@ -3,7 +3,7 @@ package de.flwi.adventofcode.v2019
 import java.nio.file.Paths
 
 import de.flwi.adventofcode.v2019.Day9._
-import org.scalatest.{FunSpec, FunSuite, Matchers}
+import org.scalatest.{FunSpec, Matchers}
 
 class Day9Spec extends FunSpec with Matchers {
 
