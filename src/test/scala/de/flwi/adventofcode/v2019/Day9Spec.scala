@@ -7,12 +7,26 @@ import org.scalatest.{FunSpec, Matchers}
 
 class Day9Spec extends FunSpec with Matchers {
 
+  import Parameter._
+
   val day7Input = getInput(Paths.get("data/day7.txt")).unsafeRunSync()
   val day7Ints  = day7Input.split(",").toList.map(_.toInt)
 
   val day7Part2Example1 = "3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5"
   val day7Part2Example2 =
     "3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10"
+
+  describe("Day 9") {
+    it("should parse parameters in relative mode correctly") {
+      decodeInstruction(getInts("204,1,99"), 0) shouldBe Instruction(OpCode.PrintValue, Vector(Parameter.Relative(1)))
+    }
+
+    it("should getValueOfParameter of relative parameter correctly") {
+      val prg = getInts("204,1,100,99")
+      getValueOfParameter(decodeInstruction(ints = prg, currentIndex = 0).parameters.head, prg, relativeBase = 1) shouldBe 100
+      getValueOfParameter(decodeInstruction(ints = prg, currentIndex = 0).parameters.head, prg, relativeBase = 2) shouldBe 99
+    }
+  }
 
   describe("Day 7") {
 
@@ -39,7 +53,7 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("part 2 - example #1 - debugging amp #0") {
-      val ampInitial = Amplifier(IntcodeState(getInts(day7Part2Example1), 0, Vector.empty, Vector.empty, ""), phaseSetting = 9)
+      val ampInitial = Amplifier(IntcodeState(getInts(day7Part2Example1), 0, Vector.empty, Vector.empty, 0, ""), phaseSetting = 9)
 
       val ampAfterIteration0 = ampInitial.run(0, 0)
       ampAfterIteration0.outputValues shouldBe Vector(5)
