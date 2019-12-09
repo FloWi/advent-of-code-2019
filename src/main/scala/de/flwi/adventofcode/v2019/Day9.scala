@@ -15,10 +15,10 @@ object Day9 extends IOApp {
   case class Immediate(value: Int) extends Parameter
 
   def intCodeProgramWithInput(inputLine: String, inputValues: String): IntcodeState =
-    intCodeProgram(getInts(inputLine), getInts(inputValues))
+    intCodeProgram(getInts(inputLine), getInts(inputValues), 0, "")
 
   def intCodeProgramWithInputAndOutput(inputLine: String, inputValues: String): (String, String) = {
-    val IntcodeState(currentProgramState, _, _, outputValues) = intCodeProgram(getInts(inputLine), getInts(inputValues))
+    val IntcodeState(currentProgramState, _, _, outputValues, _) = intCodeProgram(getInts(inputLine), getInts(inputValues), 0, "")
     (outputValues.mkString(","), currentProgramState.mkString(","))
   }
 
@@ -77,7 +77,7 @@ object Day9 extends IOApp {
       ints
         .updated(1, noun)
         .updated(2, verb),
-      Vector.empty
+      Vector.empty, 0, ""
     ).outputValues
 
   def findNounAndVerbForSolution(
@@ -96,15 +96,19 @@ object Day9 extends IOApp {
     }
   }
 
-  case class IntcodeState(intProgram: Vector[Int], instructionPointer: Int, inputValues: Vector[Int], outputValues: Vector[Int]) {
+  case class IntcodeState(intProgram: Vector[Int], instructionPointer: Int, inputValues: Vector[Int], outputValues: Vector[Int], id: String) {
+    def run(inputValues: Vector[Int]): IntcodeState = {
+      intCodeProgram(this.copy(inputValues = inputValues))
+    }
+
     def opCode: Int = intProgram(instructionPointer)
   }
-  def intCodeProgram(intProgram: Vector[Int], inputValues: Vector[Int], initialInstructionPointer: Int = 0): IntcodeState =
-    intCodeProgram(IntcodeState(intProgram, initialInstructionPointer, inputValues, Vector.empty))
+  def intCodeProgram(intProgram: Vector[Int], inputValues: Vector[Int], initialInstructionPointer: Int, id: String): IntcodeState =
+    intCodeProgram(IntcodeState(intProgram, initialInstructionPointer, inputValues, Vector.empty, id))
 
   @scala.annotation.tailrec
   def intCodeProgram(intcodeState: IntcodeState): IntcodeState = {
-    val IntcodeState(intProgram, instructionPointer, inputValues, outputValues) = intcodeState
+    val IntcodeState(intProgram, instructionPointer, inputValues, outputValues, id) = intcodeState
     //instructionPointer: Int, intProgram: Vector[Int], inputValues: Vector[Int], outputValues: Vector[Int]
 
     myDebug()
@@ -124,7 +128,7 @@ object Day9 extends IOApp {
         myDebug(
           s"${getValue(first)} + ${getValue(second)} = $result and stored it to register $positionOutput. Next instruction at index $nextInstruction (${intProgram(nextInstruction)})"
         )
-        intCodeProgram(IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues))
+        intCodeProgram(IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues, id))
 
       case Instruction(2, Vector(first, second, Positional(positionOutput))) =>
         //Multiplication
@@ -133,14 +137,14 @@ object Day9 extends IOApp {
         myDebug(
           s"${getValue(first)} * ${getValue(second)} = $result and stored it to register $positionOutput. Next instruction at index $nextInstruction (${intProgram(nextInstruction)})"
         )
-        intCodeProgram(IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues))
+        intCodeProgram(IntcodeState(intProgram.updated(positionOutput, result), nextInstruction, inputValues, outputValues, id))
 
       case Instruction(3, Vector(Positional(positionInput))) =>
         //read input and stores it into register
 
         if (inputValues.isEmpty) {
           myDebug(s"no more input values - halting execution")
-          IntcodeState(intProgram, instructionPointer, inputValues, outputValues)
+          IntcodeState(intProgram, instructionPointer, inputValues, outputValues, id)
         }
         else {
           val currentInputValue = inputValues.head
@@ -150,7 +154,7 @@ object Day9 extends IOApp {
           myDebug(
             s"read input ($currentInputValue) and stored it to register $positionInput. Next instruction at index $nextInstruction (${intProgram(nextInstruction)})"
           )
-          intCodeProgram(IntcodeState(intProgram.updated(positionInput, currentInputValue), nextInstruction, restInputValues, outputValues))
+          intCodeProgram(IntcodeState(intProgram.updated(positionInput, currentInputValue), nextInstruction, restInputValues, outputValues, id))
         }
       case Instruction(4, Vector(first)) =>
         //read and outputs value from register or direct
@@ -167,8 +171,8 @@ object Day9 extends IOApp {
         }
 
         val newOutput = Vector(value) ++ outputValues
-        println(s"amp #? - idx: $nextInstruction; Opcode: ${instruction.opcode}; outputting $newOutput")
-        IntcodeState(intProgram, nextInstruction, inputValues, newOutput)
+        println(s"amp #$id - idx: $nextInstruction; Opcode: ${instruction.opcode}; outputting $newOutput")
+        IntcodeState(intProgram, nextInstruction, inputValues, newOutput, id)
 
       case Instruction(jumpIf, Vector(first, second)) if jumpIf == 5 || jumpIf == 6 =>
         val compareToZeroValue = getValue(first)
@@ -183,7 +187,7 @@ object Day9 extends IOApp {
         myDebug(
           s"$name: compareToZeroValue '$compareToZeroValue', result: $result. Next instruction at index $nextIndex. ${if (result) "Jump" else "No jump"}"
         )
-        intCodeProgram(IntcodeState(intProgram, nextIndex, inputValues, outputValues))
+        intCodeProgram(IntcodeState(intProgram, nextIndex, inputValues, outputValues, id))
 
       case Instruction(lessThanOrEqualsOpCode, Vector(compareFirst, compareSecond, Positional(output)))
           if lessThanOrEqualsOpCode == 7 || lessThanOrEqualsOpCode == 8 =>
@@ -199,11 +203,11 @@ object Day9 extends IOApp {
 
         myDebug(s"$left $comparisonOperator $right = $result. Storing $resultValue at register $output")
 
-        intCodeProgram(IntcodeState(intProgram.updated(output, resultValue), nextIndex, inputValues, outputValues))
+        intCodeProgram(IntcodeState(intProgram.updated(output, resultValue), nextIndex, inputValues, outputValues, id))
 
       case Instruction(99, _) =>
-        println(s"amp #? - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
-        IntcodeState(intProgram, instructionPointer, inputValues, outputValues.reverse)
+        println(s"amp #$id - idx: $instructionPointer; Opcode: ${instruction.opcode}; Done. Outputting ${outputValues.reverse}")
+        IntcodeState(intProgram, instructionPointer, inputValues, outputValues, id)
 
       case broken =>
         throw new RuntimeException(s"something went wrong: $broken")
@@ -269,19 +273,19 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
   }
 
   def intCodeProgramFromString(inputLine: String, inputs: String = ""): String =
-    intCodeProgram(getInts(inputLine), getInts(inputs)).intProgram.mkString(",")
+    intCodeProgram(getInts(inputLine), getInts(inputs), 0, "").intProgram.mkString(",")
 
   def amplifier(intcodeProgram: Vector[Int], amplifierSetting: Int, input: Int): Int =
-    intCodeProgram(intcodeProgram, Vector(amplifierSetting, input)).outputValues.head
+    intCodeProgram(intcodeProgram, Vector(amplifierSetting, input), 0, "").outputValues.head
 
   def amplifierProgram(intcodeProgram: Vector[Int]) = {
     val sequences = 0.to(4).toVector.permutations.map {
       case v @ Vector(a, b, c, d, e) =>
-        val resA = intCodeProgram(intcodeProgram, Vector(a, 0)).outputValues.head
-        val resB = intCodeProgram(intcodeProgram, Vector(b, resA)).outputValues.head
-        val resC = intCodeProgram(intcodeProgram, Vector(c, resB)).outputValues.head
-        val resD = intCodeProgram(intcodeProgram, Vector(d, resC)).outputValues.head
-        val resE = intCodeProgram(intcodeProgram, Vector(e, resD)).outputValues.head
+        val resA = intCodeProgram(intcodeProgram, Vector(a, 0), 0, "a").outputValues.head
+        val resB = intCodeProgram(intcodeProgram, Vector(b, resA), 0, "b").outputValues.head
+        val resC = intCodeProgram(intcodeProgram, Vector(c, resB), 0, "c").outputValues.head
+        val resD = intCodeProgram(intcodeProgram, Vector(d, resC), 0, "d").outputValues.head
+        val resE = intCodeProgram(intcodeProgram, Vector(e, resD), 0, "e").outputValues.head
 
         (resE, v)
     }
@@ -292,14 +296,14 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
 
   case class Amplifier(intcodeState: IntcodeState, phaseSetting: Int) {
 
-    val outputValues = intcodeState.outputValues
+    val outputValues: Vector[Int] = intcodeState.outputValues
 
     val currentOpCode: Int = intcodeState.opCode
 
     def run(input: Int, iteration: Int): Amplifier = {
 
       val inputValues = if (iteration == 0) Vector(phaseSetting, input) else Vector(input)
-      val newState    = intCodeProgram(intcodeState.intProgram, inputValues, intcodeState.instructionPointer)
+      val newState    = intcodeState.run(inputValues)
 
       Amplifier(newState, phaseSetting)
     }
@@ -316,7 +320,7 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
 
       amplifiers.indices.foreach { idx =>
         if (currentOpCodes.contains(99)) {
-          //println(s"iteration: $iteration; Amp #$idx; Found an amp that has halted ${currentOpCodes}. Continuing computation")
+          println(s"iteration: $iteration; Amp #$idx; Found an amp that has halted. Opcodes of amps: ${currentOpCodes}. Continuing computation")
         }
         val amp                = amplifiers(idx)
         val inputForCurrentAmp = if (idx == 0) inputForFirstAmp else amplifiers(idx - 1).outputValues.head
@@ -335,8 +339,8 @@ DE - two-digit initialInstructionPointer,      02 == initialInstructionPointer 2
     }
 
     val amps = helper(
-      amps = phaseSettings.map { ps =>
-        val initialState = IntcodeState(intCodeProgram, 0, Vector.empty, Vector.empty)
+      amps = phaseSettings.zipWithIndex.map { case (ps, idx) =>
+        val initialState = IntcodeState(intCodeProgram, 0, Vector.empty, Vector.empty, id = idx.toString)
         Amplifier(initialState, phaseSetting = ps)
       },
       iteration = 0,
