@@ -38,16 +38,21 @@ class Day9Spec extends FunSpec with Matchers {
     }
 
     it("should handle part 1 example #1 correctly") {
+      val ints = getInts("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99")
       //takes no input and produces a copy of itself as output.
-      val initial = IntcodeState(getInts("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99"), 0, Vector.empty, Vector.empty, 2000, "")
+      val initial = IntcodeState(ints, 0, Vector.empty, Vector.empty, 2000, "")
       val actual  = intCodeProgram(initial)
-      actual.outputValues shouldBe Vector.empty
+      actual.ints shouldBe ints
     }
 
     it("should handle writing a value to an index larger than initialProgram.length correctly") {
+      val prg = "3,100,99"
       //WriteValue (Opcode 3)
-      val initial = IntcodeState(getInts("3,100,99"), 0, Vector(4711), Vector.empty, 0, "id")
+      val initial = IntcodeState(getInts(prg), 0, Vector(4711), Vector.empty, 0, "id")
       val actual  = intCodeProgram(initial)
+      actual.ints.size shouldBe 101
+      actual.ints.take(3).mkString(",") shouldBe prg
+      actual.ints(100) shouldBe 4711
     }
   }
 
