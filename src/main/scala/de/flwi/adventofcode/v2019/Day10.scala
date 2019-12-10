@@ -6,8 +6,6 @@ import cats.effect.{Blocker, ExitCode, IO, IOApp}
 import de.flwi.adventofcode.v2019.IntCodeComputer.getInts
 import fs2.Stream
 
-import scala.reflect.internal.util.Origins.OriginId
-
 object Day10 extends IOApp {
 
   import FileReader._
@@ -23,19 +21,14 @@ object Day10 extends IOApp {
       _           <- IO(println(resultPart2))
     } yield ExitCode.Success
 
-  def part1(inputLine: String): String = {
-    val initial = IntCodeComputer(getInts(inputLine), instructionPointer = 0, inputValues = Vector(1L), outputValues = Vector.empty, relativeBase = 0, id = "")
-    val actual  = initial.run()
+  def part1(input: String): String = {
+    val solution = Location.findBestAsteroidForMonitoringStation(input)
 
-    actual.outputValues.toString()
+    s"best location is ${solution._1} with ${solution._2.size} asteroids in sight"
   }
 
-  def part2(inputLine: String): String = {
-    val initial = IntCodeComputer(getInts(inputLine), instructionPointer = 0, inputValues = Vector(2L), outputValues = Vector.empty, relativeBase = 0, id = "")
-    val actual  = initial.run()
-
-    actual.outputValues.toString()
-  }
+  def part2(inputLine: String): String =
+    ???
 
   def getInput: IO[String] =
     getInput(Paths.get("data/day10.txt"))
@@ -45,11 +38,10 @@ object Day10 extends IOApp {
       .resource(Blocker[IO])
       .flatMap { blocker =>
         lines(blocker, filePath)
-          .take(1)
       }
       .compile
       .toList
-      .map(_.head)
+      .map(_.mkString("\n"))
 
   val isDebug = false
   def myDebug(x: Any): Unit =
@@ -68,7 +60,7 @@ object Location {
     result
   }
 
-  def findBestAsteroidForMonitoringStation(input: String): Location = {
+  def findBestAsteroidForMonitoringStation(input: String): (Location, Set[Location]) = {
     val asteroidMap = Location.parseMap(input)
 
     //for-each asteroid
@@ -79,7 +71,7 @@ object Location {
     }
 
     val result = visiblesByCandidate.maxBy(_._2.size)
-    result._1
+    result
   }
 
   def canSee(origin: Location, other: Location, asteroidMap: AsteroidMap): Boolean = {
@@ -117,17 +109,18 @@ object Location {
     if (b == 0) a else gcd(b, a % b)
 
   def lineOfSight(start: Location, end: Location, mapWidth: Int, mapHeight: Int): List[Location] = {
-    val offset     = end - start
+    val offset     = start - end
     val normalized = offset.normalized
 
     val mapSize = mapHeight + mapHeight
-    val result = (mapSize * -1)
-      .to(mapSize)
-      .map { i =>
+
+    val result =
+      1.to(mapSize)
+        .map { i =>
           start + Location(i * normalized.x, i * normalized.y)
-      }
-      .filter { case Location(x, y) => x >= 0 && x < mapWidth && y >= 0 && y < mapHeight }
-      .toList
+        }
+        .filter { case Location(x, y) => x >= 0 && x < mapWidth && y >= 0 && y < mapHeight }
+        .toList
 
     result.diff(List(start, end))
   }
@@ -142,8 +135,15 @@ case class Location(x: Int, y: Int) {
 
   def normalized: Location = {
     val gcd_ = Location.gcd(x, y)
+    val correctionFactorX =
+      if (x < 0) -1
+      else 1
 
-    Location(x / gcd_, y / gcd_)
+    val correctionFactorY =
+      if (y < 0) -1
+      else 1
+
+    Location(x / math.abs(gcd_), y / math.abs(gcd_))
   }
 
   def distance: Int = math.abs(x) + math.abs(y)

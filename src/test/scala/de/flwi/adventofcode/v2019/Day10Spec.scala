@@ -1,15 +1,10 @@
 package de.flwi.adventofcode.v2019
-import java.nio.file.Paths
-
-import de.flwi.adventofcode.v2019.Amplifer.{feedbackLoopAmplifierProgram, runAmplifiers}
-import de.flwi.adventofcode.v2019.Day10._
-import de.flwi.adventofcode.v2019.Instruction.decodeInstruction
-import de.flwi.adventofcode.v2019.IntCodeComputer.{getInts, intCodeProgramWithInput, intCodeProgramWithInputAndOutput}
+import de.flwi.adventofcode.v2019.Location.AsteroidMap
 import org.scalatest.{FunSpec, Matchers}
 
-class Day10Spec extends FunSpec with Matchers {
+import scala.collection.mutable.ArrayBuffer
 
-  import Parameter._
+class Day10Spec extends FunSpec with Matchers {
 
   /*
       The best location for a new monitoring station on this map is the highlighted asteroid at 3,4
@@ -76,18 +71,65 @@ class Day10Spec extends FunSpec with Matchers {
       actual should contain theSameElementsAs expected
     }
 
+    it("should calculate the line of sight only in the direction of the candidate") {
+      val expected = List(
+        Location(0, 0),
+        Location(2, 2)
+      )
+      val actual = Location.lineOfSight(Location(3, 3), Location(1, 1), 10, 10)
+      actual should contain theSameElementsAs expected
+    }
+
     it("should calculate the line of sight of 1x5 map") {
-      val actual = Location.lineOfSight(Location(0,0), Location(0,2), 1, 5)
+      val actual = Location.lineOfSight(Location(0, 0), Location(0, 2), 1, 5)
       actual should contain theSameElementsAs List(
-        Location(0,1),
-        Location(0,3),
-        Location(0,4)
+        Location(0, 1),
+        Location(0, 3),
+        Location(0, 4)
       )
     }
 
     it("should calculate the line of sight for (1,0) --> (4,4) correctly") {
       val actual = Location.lineOfSight(Location(1, 0), Location(4, 4), 10, 10)
       actual should contain theSameElementsAs List(Location(7, 8))
+    }
+
+    it("should calculate the line of sight for (4,2) --> (2,2) correctly") {
+      val actual = Location.lineOfSight(Location(4, 2), Location(2, 2), 10, 10)
+      actual should contain theSameElementsAs List(
+        Location(3, 2),
+        Location(1, 2),
+        Location(0, 2),
+      )
+    }
+
+    it("normalized should work in every direction") {
+      val origin = Location(3, 3)
+
+      //left
+      (origin - Location(1, 3)).normalized shouldBe Location(-1, 0)
+
+      //right
+      (origin - Location(5, 3)).normalized shouldBe Location(1, 0)
+
+      //top
+      (origin - Location(3, 1)).normalized shouldBe Location(0, -1)
+
+      //bottom
+      (origin - Location(3, 5)).normalized shouldBe Location(0, 1)
+
+      //top-right
+      (origin - Location(4, 2)).normalized shouldBe Location(1, -1)
+
+      //bottom-right
+      (origin - Location(4, 4)).normalized shouldBe Location(1, 1)
+
+      //top-left
+      (origin - Location(2, 2)).normalized shouldBe Location(-1, -1)
+
+      //bottom-left
+      (origin - Location(2, 4)).normalized shouldBe Location(-1, 1)
+
     }
 
     it("should calculate the line of sight where initial offset is (3,3) --> can be normalized") {
@@ -156,13 +198,30 @@ class Day10Spec extends FunSpec with Matchers {
 """.trim
 
       val asteroidMap = Location.parseMap(input)
-      Location.canSee(Location(0,0), Location(0,2), asteroidMap) shouldBe true
-      Location.canSee(Location(0,0), Location(0,3), asteroidMap) shouldBe false
-      Location.canSee(Location(0,0), Location(0,4), asteroidMap) shouldBe false
+      Location.canSee(Location(0, 0), Location(0, 2), asteroidMap) shouldBe true
+      Location.canSee(Location(0, 0), Location(0, 3), asteroidMap) shouldBe false
+      Location.canSee(Location(0, 0), Location(0, 4), asteroidMap) shouldBe false
 
     }
 
-    it("should work") {
+    it("canSee should only see the first in direct line of sight") {
+      val input =
+        """.#..#
+          |.....
+          |#####
+          |....#
+          |...##
+          |""".stripMargin
+
+      val asteroidMap = Location.parseMap(input)
+
+      Location.canSee(Location(4, 2), Location(3, 2), asteroidMap) shouldBe true
+      Location.canSee(Location(4, 2), Location(2, 2), asteroidMap) shouldBe false
+      Location.canSee(Location(4, 2), Location(1, 2), asteroidMap) shouldBe false
+      Location.canSee(Location(4, 2), Location(0, 2), asteroidMap) shouldBe false
+    }
+
+    it("part 1 small example should work") {
       val input =
         """.#..#
           |.....
@@ -172,9 +231,131 @@ class Day10Spec extends FunSpec with Matchers {
           |""".stripMargin
 
       val expected = Location(3, 4)
-      val actual   = Location.findBestAsteroidForMonitoringStation(input)
+      val actual   = Location.findBestAsteroidForMonitoringStation(input)._1
 
       actual shouldBe expected
     }
+
+    it("should solve part1") {
+      println(Day10.part1(Day10.getInput.unsafeRunSync()))
+    }
   }
+
+  describe("Day 10 Part 1 large examples") {
+    it("should solve example #1") {
+      val input =
+        """
+......#.#.
+#..#.#....
+..#######.
+.#.#.###..
+.#..#.....
+..#....#.#
+#..#....#.
+.##.#..###
+##...#..#.
+.#....####
+        """.trim
+
+      val map       = Location.parseMap(input)
+      val candidate = Location(1, 8)
+      val visibles  = Location.findVisible(map, candidate)
+
+      val result = Location.findBestAsteroidForMonitoringStation(input)
+
+      debugMap(map, visibles, candidate)
+
+      result._2.size shouldBe 33
+      result._1 shouldBe Location(5, 8)
+    }
+
+    it("should solve example #2") {
+      val input =
+        """
+#.#...#.#.
+.###....#.
+.#....#...
+##.#.#.#.#
+....#.#.#.
+.##..###.#
+..#...##..
+..##....##
+......#...
+.####.###.
+        """.trim
+
+      Location.findBestAsteroidForMonitoringStation(input)._1 shouldBe Location(1, 2)
+    }
+
+    it("should solve example #3") {
+      val input =
+        """
+.#..#..###
+####.###.#
+....###.#.
+..###.##.#
+##.##.#.#.
+....###..#
+..#.#..#.#
+#..#.#.###
+.##...##.#
+.....#.#..
+        """.trim
+
+      Location.findBestAsteroidForMonitoringStation(input)._1 shouldBe Location(6, 3)
+    }
+
+    it("should solve example #4") {
+      val input =
+        """
+.#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##
+        """.trim
+
+      Location.findBestAsteroidForMonitoringStation(input)._1 shouldBe Location(11, 13)
+    }
+  }
+
+  def debugMap(map: AsteroidMap, visibles: Set[Location], candidate: Location): Unit = {
+
+    def emptyMap(): ArrayBuffer[ArrayBuffer[Char]] = collection.mutable.ArrayBuffer.fill(map.height)(collection.mutable.ArrayBuffer.fill(map.width)(' '))
+
+    def render(showMap: ArrayBuffer[ArrayBuffer[Char]]): String =
+      showMap.map { row =>
+        row.mkString(";")
+      }.mkString("\n")
+
+    val asteroidDebugMap = emptyMap()
+    map.asteroidLocations.foreach { case Location(x, y) => asteroidDebugMap(y).update(x, '#') }
+
+    println("asteroids")
+    println(render(asteroidDebugMap))
+
+    val visiblesDebugMap = emptyMap()
+    visibles.foreach { case Location(x, y) => visiblesDebugMap(y).update(x, 'v') }
+    visiblesDebugMap(candidate.y).update(candidate.x, 'x')
+
+    println(s"point of view of $candidate")
+    println(render(visiblesDebugMap))
+
+  }
+
 }
