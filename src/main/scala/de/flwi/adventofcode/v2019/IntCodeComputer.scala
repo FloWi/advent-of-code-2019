@@ -230,6 +230,8 @@ case class IntCodeComputer private (intProgram: Map[Int, Long],
   def run(inputValues: Vector[Long]): IntCodeComputer =
     this.copy(inputValues = inputValues).run()
 
+  def removedOutput = this.copy(outputValues = Vector.empty)
+
   @scala.annotation.tailrec
   final def run(): IntCodeComputer = {
 

@@ -266,7 +266,7 @@ class Day10Spec extends FunSpec with Matchers {
 
         val result = Location.findBestAsteroidForMonitoringStation(input)
 
-        debugMap(map, visibles, candidate)
+        Helper.debugMap(map, visibles, candidate)
 
         result._2.size shouldBe 33
         result._1 shouldBe Location(5, 8)
@@ -337,29 +337,172 @@ class Day10Spec extends FunSpec with Matchers {
       }
     }
 
-    def debugMap(map: AsteroidMap, visibles: Set[Location], candidate: Location): Unit = {
+  }
 
-      def emptyMap(): ArrayBuffer[ArrayBuffer[Char]] = collection.mutable.ArrayBuffer.fill(map.height)(collection.mutable.ArrayBuffer.fill(map.width)(' '))
+  describe("Part 2") {
 
-      def render(showMap: ArrayBuffer[ArrayBuffer[Char]]): String =
-        showMap.map { row =>
-          row.mkString(";")
-        }.mkString("\n")
-
-      val asteroidDebugMap = emptyMap()
-      map.asteroidLocations.foreach { case Location(x, y) => asteroidDebugMap(y).update(x, '#') }
-
-      println("asteroids")
-      println(render(asteroidDebugMap))
-
-      val visiblesDebugMap = emptyMap()
-      visibles.foreach { case Location(x, y) => visiblesDebugMap(y).update(x, 'v') }
-      visiblesDebugMap(candidate.y).update(candidate.x, 'x')
-
-      println(s"point of view of $candidate")
-      println(render(visiblesDebugMap))
-
+    it("should solve part2") {
+      println(Day10.part2(Day10.getInput.unsafeRunSync()))
     }
+
+    describe("fundamentals") {
+
+      val origin      = Location(3, 3)
+      val top         = Location(3, 2)
+      val topRight    = Location(4, 2)
+      val right       = Location(4, 3)
+      val bottomRight = Location(4, 4)
+      val bottom      = Location(3, 4)
+      val bottomLeft  = Location(2, 4)
+      val left        = Location(2, 3)
+      val topLeft     = Location(2, 2)
+      it("should calculate angle between twp points correctly") {
+        Location.angleBetween(origin, top) shouldBe 270
+        Location.angleBetween(origin, topRight) shouldBe 315
+        Location.angleBetween(origin, right) shouldBe 0
+        Location.angleBetween(origin, bottomRight) shouldBe 45
+        Location.angleBetween(origin, bottom) shouldBe 90
+        Location.angleBetween(origin, bottomLeft) shouldBe 135
+        Location.angleBetween(origin, left) shouldBe 180
+        Location.angleBetween(origin, topLeft) shouldBe 225
+      }
+
+      it("should find the angle clockwise between two points relative to viewDirection") {
+        Location.angleBetween(origin, topRight, 270) shouldBe 45
+        Location.angleBetween(origin, topLeft, 270) shouldBe -45
+      }
+    }
+
+    describe("example") {
+      val input =
+        """
+.#....#####...#..
+##...##.#####..##
+##...#...#.#####.
+..#.....X...###..
+..#.#.....#....##""".trim
+      val map           = Location.parseMap(input)
+      val laserLocation = Location(8, 3)
+
+      it("should find the first target") {
+        val visibles             = Location.findVisible(map, laserLocation)
+        val currentViewDirection = 270
+        val visiblesWithAngle = visibles.map { v =>
+          val angle = Location.angleBetween(laserLocation, v, currentViewDirection)
+          (v, angle)
+        }
+        val actual = visiblesWithAngle
+          .filter(_._2 >= 0.0)
+          .minBy(_._2)
+        actual shouldBe (Location(8, 1), 0.0)
+      }
+
+      it("should find the second target") {
+        val mapAfter1            = map.copy(asteroidLocations = map.asteroidLocations.diff(Set(Location(8, 1))))
+        val visibles             = Location.findVisible(mapAfter1, laserLocation)
+        val currentViewDirection = 270
+        val visiblesWithAngle = visibles.map { v =>
+          val angle = Location.angleBetween(laserLocation, v, currentViewDirection)
+          (v, angle)
+        }
+        val actual = visiblesWithAngle
+          .filter(_._2 > 0.0) //greater than 0
+          .minBy(_._2)
+
+        actual._1 shouldBe Location(9, 0)
+      }
+
+      it("should shoot asteroids correctly") {
+        val firstTwo           = Location.shootAsteroids(map, laserLocation, 270, 2).toList
+        val destroyedAsteroids = firstTwo.last._3.reverse
+        destroyedAsteroids shouldBe List(
+          Location(8, 1),
+          Location(9, 0)
+        )
+      }
+
+      it("render the map 4 debugging") {
+
+        val map      = Location.parseMap(input)
+        val visibles = Location.findVisible(map, laserLocation)
+
+        Helper.debugMap(map, visibles, laserLocation)
+      }
+    }
+
+    describe("large example") {
+      val input =
+        """
+.#..##.###...#######
+##.############..##.
+.#.######.########.#
+.###.#######.####.#.
+#####.##.#.##.###.##
+..#####..#.#########
+####################
+#.####....###.#.#.##
+##.#################
+#####.##.###..####..
+..######..##.#######
+####.##.####...##..#
+.#####..#.######.###
+##...#.##########...
+#.##########.#######
+.####.#.###.###.#.##
+....##.##.###..#####
+.#.#.###########.###
+#.#.#.#####.####.###
+###.##.####.##.#..##
+""".trim
+
+      val map           = Location.parseMap(input)
+      val laserLocation = Location(11, 13)
+
+      it("should shoot asteroids correctly") {
+        val firstTwo           = Location.shootAsteroids(map, laserLocation, 270, 299).toList
+        val destroyedAsteroids = firstTwo.last._3.reverse
+
+        destroyedAsteroids(1 - 1) shouldBe Location(11, 12)
+        destroyedAsteroids(2 - 1) shouldBe Location(12, 1)
+        destroyedAsteroids(3 - 1) shouldBe Location(12, 2)
+        destroyedAsteroids(10 - 1) shouldBe Location(12, 8)
+        destroyedAsteroids(20 - 1) shouldBe Location(16, 0)
+        destroyedAsteroids(50 - 1) shouldBe Location(16, 9)
+        destroyedAsteroids(100 - 1) shouldBe Location(10, 16)
+        destroyedAsteroids(199 - 1) shouldBe Location(9, 6)
+        destroyedAsteroids(200 - 1) shouldBe Location(8, 2)
+        destroyedAsteroids(201 - 1) shouldBe Location(10, 9)
+        destroyedAsteroids(299 - 1) shouldBe Location(11, 1)
+      }
+    }
+  }
+
+}
+
+object Helper {
+  def debugMap(map: AsteroidMap, visibles: Set[Location], candidate: Location): Unit = {
+
+    def emptyMap(): ArrayBuffer[ArrayBuffer[Char]] = collection.mutable.ArrayBuffer.fill(map.height)(collection.mutable.ArrayBuffer.fill(map.width)(' '))
+
+    def render(showMap: ArrayBuffer[ArrayBuffer[Char]]): String =
+      showMap.map { row =>
+        row.mkString(";")
+      }.mkString("\n")
+
+    val asteroidDebugMap = emptyMap()
+    map.asteroidLocations.foreach { case Location(x, y) => asteroidDebugMap(y).update(x, '#') }
+
+    println(s"map: ${map.width} x ${map.height}")
+
+    println("asteroids")
+    println(render(asteroidDebugMap))
+
+    val visiblesDebugMap = emptyMap()
+    visibles.foreach { case Location(x, y) => visiblesDebugMap(y).update(x, 'v') }
+    visiblesDebugMap(candidate.y).update(candidate.x, 'x')
+
+    println(s"point of view of $candidate")
+    println(render(visiblesDebugMap))
 
   }
 

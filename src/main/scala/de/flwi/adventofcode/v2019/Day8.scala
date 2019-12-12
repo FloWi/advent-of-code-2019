@@ -87,7 +87,9 @@ object Day8 extends IOApp {
     pixelsOfLayers.find(_ != 2).get
 
   def renderImage(pixels: List[List[Int]]): BufferedImage = {
-    val image = new BufferedImage(25, 6, BufferedImage.TYPE_BYTE_GRAY)
+    val height = pixels.size
+    val width = pixels.head.size
+    val image = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY)
     pixels.zipWithIndex.foreach {
       case (row, y) =>
         row.zipWithIndex.foreach {

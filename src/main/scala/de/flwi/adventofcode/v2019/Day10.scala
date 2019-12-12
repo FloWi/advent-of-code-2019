@@ -3,8 +3,7 @@ package de.flwi.adventofcode.v2019
 import java.nio.file.{Path, Paths}
 
 import cats.effect.{Blocker, ExitCode, IO, IOApp}
-import de.flwi.adventofcode.v2019.IntCodeComputer.getInts
-import fs2.Stream
+import fs2.{Pure, Stream}
 
 object Day10 extends IOApp {
 
@@ -27,8 +26,16 @@ object Day10 extends IOApp {
     s"best location is ${solution._1} with ${solution._2.size} asteroids in sight"
   }
 
-  def part2(inputLine: String): String =
-    ???
+  def part2(input: String): String = {
+    val map                    = Location.parseMap(input)
+    val laserLocationFromPart1 = Location(26, 28)
+    val firstTwo               = Location.shootAsteroids(map, laserLocationFromPart1, 270, 200).toList
+    val destroyedAsteroids     = firstTwo.last._3.reverse
+
+    val asteroidNo200 = destroyedAsteroids.last
+    (s"200th asteroid is $asteroidNo200 --> answer is ${asteroidNo200.x * 100 + asteroidNo200.y}")
+
+  }
 
   def getInput: IO[String] =
     getInput(Paths.get("data/day10.txt"))
@@ -51,14 +58,76 @@ object Day10 extends IOApp {
 }
 
 object Location {
+  def angleBetween(v1: Location, v2: Location): Double = {
+//    //https://www.euclideanspace.com/maths/algebra/vectors/angleBetween/
+//    (math.atan2(v2.y, v2.x) - math.atan2(v1.y, v1.x)) / math.Pi * 180
+
+    val angle = Math.toDegrees(Math.atan2(v2.y - v1.y, v2.x - v1.x)).toFloat
+    if (angle < 0) angle + 360
+    else angle
+
+  }
+
+  def angleBetween(v1: Location, v2: Location, viewDirection: Double): Double = {
+    val angle = angleBetween(v1, v2) - viewDirection
+    (angle + 360) % 360.0
+  }
 
   def findVisible(asteroidMap: AsteroidMap, candidate: Location): Set[Location] = {
     val result = asteroidMap.asteroidLocations.-(candidate).flatMap { other =>
-      val b: Boolean = canSee(candidate, other, asteroidMap)
+      val b = canSee(candidate, other, asteroidMap)
       if (b) List(other) else List.empty
     }
     result
   }
+
+  def shootAsteroids(map: AsteroidMap,
+                     laserLocation: Location,
+                     initialAngle: Double,
+                     numberOfAsteroidsToShoot: Int): Stream[Pure, (AsteroidMap, Double, List[Location])] =
+    Stream
+      .constant(())
+      .zipWithIndex
+      .map(_._2)
+      .take(numberOfAsteroidsToShoot)
+      .scan(map, initialAngle, List.empty[Location]) {
+        case ((oldMap, currentViewDirection, asteroidsShot), idx) =>
+          println(s"""
+               |oldMap size: ${oldMap.asteroidLocations.size}
+               |currentViewDirection: $currentViewDirection
+               |asteroidsShot: ${asteroidsShot.size}
+               |idx: $idx
+               |""".stripMargin)
+          val visibles = findVisible(oldMap, laserLocation)
+
+          val visiblesWithAngle = visibles.map { v =>
+            val angle = Location.angleBetween(laserLocation, v, currentViewDirection)
+            (v, angle)
+          }
+
+          def filter(angle: Double): Boolean =
+            if (idx == 0)
+              angle == 0
+            else angle > 0
+
+          //Boundary condition in example.
+          //The last remaining asteroid has the exact same angle as the previously shot asteroid one.
+          //It would be filtered out, but since it's the last one, we can just pick it.
+          val nextAsteroid =
+            if (visiblesWithAngle.size == 1)
+              visiblesWithAngle.head
+            else
+              visiblesWithAngle
+                .filter(tup => filter(tup._2))
+                .minBy(_._2)
+
+          val newMap = oldMap.copy(asteroidLocations = oldMap.asteroidLocations.diff(Set(nextAsteroid._1)))
+
+          val result = (newMap, (nextAsteroid._2 + currentViewDirection) % 360, nextAsteroid._1 :: asteroidsShot)
+          println(result)
+
+          result
+      }
 
   def findBestAsteroidForMonitoringStation(input: String): (Location, Set[Location]) = {
     val asteroidMap = Location.parseMap(input)
