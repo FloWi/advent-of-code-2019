@@ -3,7 +3,8 @@ package de.flwi.adventofcode.v2019
 import java.awt.image.BufferedImage
 import java.io.File
 
-import de.flwi.adventofcode.v2019.Day11.{getInput, solve, Color, Direction}
+import de.flwi.adventofcode.v2019.day11.Day11
+import de.flwi.adventofcode.v2019.day11.Day11.{Color, Direction, getInput, solve}
 import javax.imageio.ImageIO
 import org.scalatest.{FunSpec, Matchers}
 
