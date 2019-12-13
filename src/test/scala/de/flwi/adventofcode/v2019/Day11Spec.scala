@@ -1,11 +1,7 @@
 package de.flwi.adventofcode.v2019
 
-import java.awt.image.BufferedImage
-import java.io.File
-
 import de.flwi.adventofcode.v2019.day11.Day11
-import de.flwi.adventofcode.v2019.day11.Day11.{Color, Direction, getInput, solve}
-import javax.imageio.ImageIO
+import de.flwi.adventofcode.v2019.day11.Day11.getInput
 import org.scalatest.{FunSpec, Matchers}
 
 class Day11Spec extends FunSpec with Matchers {
