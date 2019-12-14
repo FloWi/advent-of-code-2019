@@ -64,4 +64,6 @@ class Day14Spec extends FunSpec with Matchers {
       println(Day14.part1(Day14.getInput.unsafeRunSync()))
     }
   }
+
+  describe("Part 2") {}
 }

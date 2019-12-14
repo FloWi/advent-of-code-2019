@@ -4,7 +4,7 @@ import cats.kernel.Monoid
 
 object Model {
   case class Element(name: String)
-  case class Formula(inputs: Map[Element, Int], output: (Element, Int))
+  case class Formula(inputs: Map[Element, Long], output: (Element, Long))
   object Formula {
     def fromString(str: String): Formula = {
       val List(ingredientsStr, outputStr) = str.split(" => ").toList
@@ -15,7 +15,7 @@ object Model {
       Formula(ingredients, output)
     }
 
-    def elementAmountFromString(str: String): (Element, Int) = {
+    def elementAmountFromString(str: String): (Element, Long) = {
       val List(amount, elementName) = str.split(" ").toList
       (Element(elementName), amount.toInt)
     }
@@ -24,17 +24,17 @@ object Model {
   def parseInput(lines: List[String]): List[Formula] =
     lines.map(Formula.fromString)
 
-  def createRecipeBook(formulas: List[Formula]): Map[(Element, Int), Map[Element, Int]] =
+  def createRecipeBook(formulas: List[Formula]): Map[(Element, Long), Map[Element, Long]] =
     formulas.map {
       case Formula(inputs, output) =>
         output -> inputs
     }.toMap
 
-  def calculateOreAmountForOneFuel(recipeBook: Map[(Element, Int), Map[Element, Int]]): Int = {
+  def calculateOreAmountForOneFuel(recipeBook: Map[(Element, Long), Map[Element, Long]]): Long = {
     //start from fuel and walk down until you find recipes, that take only ORE
 
     @scala.annotation.tailrec
-    def helper(demand: Map[Element, Int], elementsInStock: Map[Element, Int], recursionDepth: Int): Map[Element, Int] = {
+    def helper(demand: Map[Element, Long], elementsInStock: Map[Element, Long], recursionDepth: Long): Map[Element, Long] = {
       import cats.implicits._
 
       println(s"""demand: $demand
@@ -56,10 +56,10 @@ object Model {
             val supply = currentElementsInStock(element)
 
             val (newDemand, newSupply) = if (demand > supply) {
-              (demand - supply, 0)
+              (demand - supply, 0L)
             }
             else {
-              (0, supply - demand)
+              (0L, supply - demand)
             }
 
             (currentDemand.updated(element, newDemand), currentElementsInStock.updated(element, newSupply))
