@@ -65,5 +65,48 @@ class Day14Spec extends FunSpec with Matchers {
     }
   }
 
-  describe("Part 2") {}
+  describe("Part 2") {
+    val amountORE = 1000000000000L
+
+    describe("example 1") {
+      val input =
+        """
+          |157 ORE => 5 NZVS
+          |165 ORE => 6 DCFZ
+          |44 XJWVT, 5 KHKGT, 1 QDVJ, 29 NZVS, 9 GPVTF, 48 HKGWZ => 1 FUEL
+          |12 HKGWZ, 1 GPVTF, 8 PSHF => 9 QDVJ
+          |179 ORE => 7 PSHF
+          |177 ORE => 5 HKGWZ
+          |7 DCFZ, 7 PSHF => 2 XJWVT
+          |165 ORE => 2 GPVTF
+          |3 DCFZ, 7 NZVS, 5 HKGWZ, 10 PSHF => 8 KHKGT
+          |""".stripMargin.trim
+
+      it("should solve ex1") {
+        val expected = 82892753L
+
+        val formulas                                             = parseInput(input.split("\n").toList)
+        val recipeBook: Map[(Element, Long), Map[Element, Long]] = createRecipeBook(formulas)
+
+        val foo = calculateOreAmountForOneFuel(recipeBook, Map(Element("FUEL") -> expected))
+
+        val result = searchMaxFuel(recipeBook, 1, amountORE, amountORE)
+        println(result)
+        result shouldBe expected
+      }
+    }
+
+    it("should solve part 2 correctly") {
+      val formulas = parseInput(Day14.getInput.unsafeRunSync())
+
+      val recipeBook: Map[(Element, Long), Map[Element, Long]] = createRecipeBook(formulas)
+
+      // search for the optimal solution
+      // e.g. 100 fuel require 1000 ORE
+      //      200 fuel require 2000 ORE
+
+      val result = searchMaxFuel(recipeBook, 1, amountORE, amountORE)
+      println(result)
+    }
+  }
 }

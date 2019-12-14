@@ -40,4 +40,10 @@ object Day14 extends IOApp {
       }
       .compile
       .toList
+
+  val isDebug = false
+  def myDebug(x: Any): Unit =
+    if (isDebug) {
+      Console.println(x)
+    }
 }
