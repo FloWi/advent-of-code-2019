@@ -113,6 +113,8 @@ class Day12Spec extends FunSpec with Matchers {
 
       val initialPosition = actual.head.toList.head._1
 
+      //check the recurrence for every moon to its origin independently?
+
       val set = collection.mutable.HashSet.empty[(Map[Int, Coord3D], Map[Int, Velocity])]
 
       actual.zipWithIndex.filter {
